@@ -390,7 +390,8 @@
       imageMap[fileName] = img;
     }
 
-    let current_pairs = pairs.copyWithin();
+    // Clone pairs to current_pairs
+    let current_pairs = pairs.slice();
     current_pairs.push(sentinel[currentBatch]);
 
     shuffle(current_pairs);
@@ -484,7 +485,7 @@
         currentBatch++;
         if (currentBatch < n_batches) {
           currentTrial = 0;
-          current_pairs = pairs.copyWithin();
+          current_pairs = pairs.slice();
           // Add one sentinel pair to the end of the current pairs
           current_pairs.push(sentinel[currentBatch]);
           shuffle(current_pairs);
