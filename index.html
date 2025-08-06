@@ -351,7 +351,6 @@
     ];
 
     const n_batches = 10;
-    const trials_per_batch = pairs.length;
     let currentTrial = 0;
     let currentBatch = 0;
     let isTraining = true;
@@ -403,7 +402,7 @@
     const trialCount = document.getElementById('trial-count');
     const breakScreen = document.getElementById('break-screen');
     const finishBtn = document.getElementById('finishBtn');
-
+    const trials_per_batch = current_pairs.length;
     
     function startCalibration() {
       document.getElementById('instruction-screen').style.display = 'none';
