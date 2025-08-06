@@ -101,6 +101,8 @@
     <li>After each selection, a noisy image will briefly appear before the next pair is shown.</li>
     <li>Repeat steps 2–4 until all trials are completed. The number of remaining trials will be displayed on the screen.</li>
   </ol>
+  <p style="color: red;">WARNING: There are attention check comparisons, please pay attention to the instructions. <br>Failing to comply may result in exclusion from the study.</p>
+
   <button onclick="startCalibration()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">Start Calibration</button>
 </div>
 
@@ -266,8 +268,7 @@
     </select>
 
     <h4>Please describe the strategy you used to select the brighter lamp:</h4>
-    <textarea id="brightnessStrategy" name="brightnessStrategy" rows="4" placeholder="Describe your approach..." required></textarea>
-
+    <textarea id="brightnessStrategy" name="brightnessStrategy" cols="70" rows="4" placeholder="Describe your approach..." required></textarea>
     </form>
   </div>
   <p id="log" style="text-align: center; font-size: large;"></p>
@@ -320,23 +321,36 @@
     }
 
     const trainingPairs = [
-    ['sunset_14', 'sunset_13.376'],
-    ['noon_14', 'noon_13.044'],
-    ['dusk_14', 'dusk_14.822'],
-    ['noon_14', 'noon_12.674']
+    ['dusk_14', 'dusk_80'],
+    ['night_14', 'noon_200'],
+    ['dusk_14', 'dusk_14.747'],
+    ['sunset_14', 'sunset_12.704']
     ];
     
     let currentSelection = null;
 
-    let pairs = [[`sunset_14`, `noon_13.044`],
-    [`sunset_14`, `dusk_14.822`],
-    [`dusk_14`, `noon_13.044`],
-    [`dusk_14`, `night_15.003`],
-    [`night_14`, `noon_12.869`],
-    [`night_14`, `sunset_13.376`],
-    [`noon_14`, `noon_14`]];
+    let pairs = [[`sunset_14`, `noon_13.075`],
+    [`sunset_14`, `dusk_14.747`],
+    [`dusk_14`, `noon_13.025`],
+    [`dusk_14`, `night_14.392`],
+    [`night_14`, `noon_12.462`],
+    [`night_14`, `sunset_12.704`]
+  ];
 
-    const n_batches = 2;
+    let sentinel = [
+      ['sunset_14', 'sunset_80'],
+      ['night_14', 'night_70'],
+      ['dusk_14', 'dusk_80'],
+      ['sunset_14', 'noon_200'],
+      ['night_14', 'noon_200'],
+      ['sunset_14', 'sunset_80'],
+      ['night_14', 'night_70'],
+      ['dusk_14', 'dusk_80'],
+      ['sunset_14', 'noon_200'],
+      ['dusk_14', 'sunset_80']
+    ];
+
+    const n_batches = 10;
     const trials_per_batch = pairs.length;
     let currentTrial = 0;
     let currentBatch = 0;
@@ -360,6 +374,10 @@
         images.push(`./images/modified_${pair[0]}W.png`);
         images.push(`./images/modified_${pair[1]}W.png`);
     });
+
+    sentinel.forEach(sent => {
+        images.push(`./images/modified_${sent[1]}W.png`);
+    });
     
     const imageMap = {};
     for (const path in images) {
@@ -367,9 +385,15 @@
       const img = new Image();
       img.src = images[path];
       img.name = fileName;
+      // print in the console the name of the image
+      console.log(`Loading image: ${fileName}`);
       imageMap[fileName] = img;
     }
 
+    let current_pairs = pairs.copyWithin();
+    current_pairs.push(sentinel[currentBatch]);
+
+    shuffle(current_pairs);
 
     const imageA = document.querySelector('#imageA img');
     const imageB = document.querySelector('#imageB img');
@@ -410,9 +434,13 @@
       // Hide images initially
       // imageA.classList.remove('hidden');
       // imageB.classList.remove('hidden');
+      // print in the console the names of the images
+      console.log(`Loading images: ${pair[1]} and ${pair[0]}`);
 
       imageA.src = img1.src;
       imageB.src = img2.src;
+      // print in the console the names of the images
+      console.log(`Loading trial: ${img1.name} vs ${img2.name}`);
       imageA.dataset.label = flip_value ? 'B' : 'A';
       imageB.dataset.label = flip_value ? 'A' : 'B';
       imageA.dataset.name = img1.name;
@@ -447,15 +475,20 @@
       } else if (isTraining) {
         isTraining = false;
         currentTrial = 0;
-        shuffle(pairs);
-        showNoiseImage(() => loadTrial(pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
+        shuffle(current_pairs);
+        shuffle(flip_array);
+        showNoiseImage(() => loadTrial(current_pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
       } else if (currentTrial < trials_per_batch) {
-        showNoiseImage(() => loadTrial(pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
+        showNoiseImage(() => loadTrial(current_pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
       } else {
         currentBatch++;
         if (currentBatch < n_batches) {
           currentTrial = 0;
-          shuffle(pairs);
+          current_pairs = pairs.copyWithin();
+          // Add one sentinel pair to the end of the current pairs
+          current_pairs.push(sentinel[currentBatch]);
+          shuffle(current_pairs);
+          shuffle(flip_array);
           // Only make the break if has passed 3 batches
           if (currentBatch % 3 === 0) {
             breakScreen.style.display = 'block';
@@ -463,7 +496,7 @@
             boxA.classList.add('hidden');
             boxB.classList.add('hidden');
           } else {
-            showNoiseImage(() => loadTrial(pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
+            showNoiseImage(() => loadTrial(current_pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]));
           }
 
         } else {
@@ -507,7 +540,7 @@
         breakScreen.style.display = 'none';
         boxA.classList.remove('hidden');
         boxB.classList.remove('hidden');
-        loadTrial(pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]);
+        loadTrial(current_pairs[currentTrial], flip_array[currentTrial + currentBatch * trials_per_batch]);
         return;
       }
 
